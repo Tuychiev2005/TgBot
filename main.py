@@ -9,27 +9,24 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 import asyncio
 
-# Настройка логирования
 logging.basicConfig(level=logging.INFO)
 
-# Инициализация бота
+
 API_TOKEN = '7857025943:AAHamcNP_id4ftZXUg-9GvteLkqgyIjgLjw'
-ADMIN_ID = 439759850  # Замените на ваш ID админа
+ADMIN_ID = 439759850 
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# Константы для пагинации
 ITEMS_PER_PAGE = 6
 
-# Языковые константы
+
 LANGUAGES = {
     'ru': 'Русский',
     'uz': 'Узбекский', 
     'en': 'Английский'
 }
 
-# Тексты для разных языков
 TEXTS = {
     'ru': {
         'welcome': "👋 Привет, {name}!\n\nДобро пожаловать в наш мини-магазин! Здесь вы можете заказать вкусные снеки и напитки.",
@@ -186,22 +183,18 @@ TEXTS = {
     }
 }
 
-# Состояния для оформления заказа
 class OrderStates(StatesGroup):
     waiting_for_phone = State()
     waiting_for_room = State()
 
-# Состояния для админ-панели
 class AdminStates(StatesGroup):
     waiting_for_product_name = State()
     waiting_for_product_price = State()
-
-# Инициализация базы данных
+    
 def init_db():
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
     
-    # Таблица пользователей
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -213,14 +206,12 @@ def init_db():
         )
     ''')
     
-    # Проверяем наличие столбца language и добавляем если его нет
     cursor.execute("PRAGMA table_info(users)")
     columns = [column[1] for column in cursor.fetchall()]
     
     if 'language' not in columns:
         cursor.execute('ALTER TABLE users ADD COLUMN language TEXT DEFAULT "ru"')
     
-    # Таблица товаров
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
             product_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -231,7 +222,6 @@ def init_db():
         )
     ''')
     
-    # Таблица корзины
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS cart (
             cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -244,7 +234,6 @@ def init_db():
         )
     ''')
     
-    # Таблица заказов
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS orders (
             order_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -259,29 +248,26 @@ def init_db():
         )
     ''')
     
-    # Добавляем товары из вашего списка
+
     products_data = [
-        # MW
         ('Snickers 0,50 gr', 'Шоколадный батончик', 10000, 'Шоколад'),
         ('Baunty 0,57 gr', 'Кокосовый батончик', 12000, 'Шоколад'),
         ('Orbit classic', 'Жвачка классическая', 6000, 'Жвачка'),
         ('Orbit watermelon', 'Жвачка арбузная', 6000, 'Жвачка'),
-        
-        # Flash energetic
         ('Flash 0,5 l', 'Энергетик 0.5л', 15000, 'Напитки'),
         ('Flash 0,25 l', 'Энергетик 0.25л', 10000, 'Напитки'),
         
-        # GODRINKS / Milly cola
+
         ('Milly cola 0,5 l', 'Кола 0.5л', 8000, 'Напитки'),
         ('Milly cola 1,0 l', 'Кола 1.0л', 11000, 'Напитки'),
         
-        # Cheers corp
+
         ('Чипсы Cheers шашлык 27гр', 'Чипсы со вкусом шашлыка', 7000, 'Чипсы'),
         ('Чипсы Cheers сметана 27гр', 'Чипсы со сметаной и луком', 7000, 'Чипсы'),
         ('Чипсы Cheers лук 45гр', 'Чипсы с зеленым луком', 10000, 'Чипсы'),
     ]
     
-    # Очищаем и добавляем товары только если таблица пустая
+
     cursor.execute('SELECT COUNT(*) FROM products')
     if cursor.fetchone()[0] == 0:
         cursor.executemany('''
@@ -292,7 +278,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Функция для получения языка пользователя
+
 def get_user_language(user_id):
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
@@ -303,7 +289,7 @@ def get_user_language(user_id):
     
     return result[0] if result else 'ru'
 
-# Функция для установки языка пользователя
+
 def set_user_language(user_id, language):
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
@@ -322,7 +308,6 @@ def set_user_language(user_id, language):
     conn.commit()
     conn.close()
 
-# Функция для добавления пользователя в базу
 def add_user_to_db(user_id, username, first_name, last_name):
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
@@ -344,7 +329,6 @@ def add_user_to_db(user_id, username, first_name, last_name):
     conn.commit()
     conn.close()
 
-# Главное меню
 def get_main_menu(user_id):
     lang = get_user_language(user_id)
     texts = TEXTS[lang]
@@ -358,7 +342,6 @@ def get_main_menu(user_id):
     builder.adjust(2, 1)
     return builder.as_markup()
 
-# Клавиатура выбора языка
 def get_language_keyboard(user_id):
     lang = get_user_language(user_id)
     texts = TEXTS[lang]
@@ -373,7 +356,7 @@ def get_language_keyboard(user_id):
     builder.adjust(1)
     return builder.as_markup()
 
-# Админ-панель
+
 def get_admin_panel():
     builder = InlineKeyboardBuilder()
     builder.add(
@@ -384,7 +367,7 @@ def get_admin_panel():
     builder.adjust(1)
     return builder.as_markup()
 
-# Клавиатура для удаления товаров
+
 def get_delete_products_keyboard():
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
@@ -396,7 +379,6 @@ def get_delete_products_keyboard():
     builder = InlineKeyboardBuilder()
     
     for product_id, name, price in products:
-        # Сокращаем длинные названия
         short_name = name if len(name) <= 30 else name[:27] + "..."
         builder.add(InlineKeyboardButton(
             text=f"🗑️ {short_name} - {price:,} сум", 
@@ -407,7 +389,7 @@ def get_delete_products_keyboard():
     builder.adjust(1)
     return builder.as_markup()
 
-# Функция для получения товаров с пагинацией
+
 def get_products_page(page: int = 0):
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
@@ -430,7 +412,6 @@ def get_products_page(page: int = 0):
     
     return products, total_pages, total_products
 
-# Функция для получения количества товара в корзине
 def get_cart_quantity(user_id, product_id):
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
@@ -441,7 +422,6 @@ def get_cart_quantity(user_id, product_id):
     
     return result[0] if result else 0
 
-# Функция для создания клавиатуры магазина с пагинацией
 def get_shop_keyboard(page: int = 0, user_id: int = None):
     products, total_pages, total_products = get_products_page(page)
     lang = get_user_language(user_id) if user_id else 'ru'
@@ -449,19 +429,16 @@ def get_shop_keyboard(page: int = 0, user_id: int = None):
     
     builder = InlineKeyboardBuilder()
     
-    # Добавляем товары в строки по 2 кнопки
     for i in range(0, len(products), 2):
         row_products = products[i:i+2]
         row_buttons = []
         
         for product in row_products:
             product_id, name, price, category = product
-            # Сокращаем длинные названия для кнопок
             short_name = name
             if len(name) > 20:
                 short_name = name[:20] + "..."
             
-            # Получаем количество в корзине
             quantity = get_cart_quantity(user_id, product_id) if user_id else 0
             
             if quantity > 0:
@@ -476,7 +453,6 @@ def get_shop_keyboard(page: int = 0, user_id: int = None):
         
         builder.row(*row_buttons)
         
-        # Добавляем кнопки управления количеством под каждым товаром
         for product in row_products:
             product_id, name, price, category = product
             quantity = get_cart_quantity(user_id, product_id) if user_id else 0
@@ -489,7 +465,7 @@ def get_shop_keyboard(page: int = 0, user_id: int = None):
                 ]
                 builder.row(*control_buttons)
     
-    # Кнопки пагинации
+
     pagination_buttons = []
     
     if page > 0:
@@ -503,7 +479,6 @@ def get_shop_keyboard(page: int = 0, user_id: int = None):
     
     page_info = texts['page_info'].format(current=page+1, total=total_pages, count=total_products)
     
-    # Кнопка корзины и назад
     builder.row(
         InlineKeyboardButton(text=texts['cart'], callback_data="cart"),
         InlineKeyboardButton(text=texts['back_to_menu'], callback_data="back_to_main")
@@ -511,7 +486,6 @@ def get_shop_keyboard(page: int = 0, user_id: int = None):
     
     return builder.as_markup(), page_info
 
-# Функция для создания текста магазина с товарами
 def get_shop_text(page: int = 0, user_id: int = None):
     products, total_pages, total_products = get_products_page(page)
     lang = get_user_language(user_id) if user_id else 'ru'
@@ -520,7 +494,6 @@ def get_shop_text(page: int = 0, user_id: int = None):
     text = texts['shop_title']
     text += f"📄 **{texts['page_info'].format(current=page+1, total=total_pages, count=total_products)}**\n\n"
     
-    # Группируем товары по категориям
     categories = {}
     for product in products:
         product_id, name, price, category = product
@@ -528,7 +501,6 @@ def get_shop_text(page: int = 0, user_id: int = None):
             categories[category] = []
         categories[category].append((product_id, name, price))
     
-    # Выводим товары по категориям
     for category, category_products in categories.items():
         text += f"**🏷️ {category}**\n"
         
@@ -547,7 +519,6 @@ def get_shop_text(page: int = 0, user_id: int = None):
     
     return text
 
-# Обработчик команды /start
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user = message.from_user
@@ -561,7 +532,6 @@ async def cmd_start(message: types.Message):
     
     await message.answer(welcome_text, reply_markup=get_main_menu(user.id))
 
-# Обработчик команды /admin
 @dp.message(Command("admin"))
 async def cmd_admin(message: types.Message):
     if message.from_user.id != ADMIN_ID:
@@ -573,7 +543,7 @@ async def cmd_admin(message: types.Message):
     
     await message.answer(texts['admin_panel'], reply_markup=get_admin_panel())
 
-# Обработчик кнопки админ-панели
+
 @dp.callback_query(F.data == "admin_panel")
 async def admin_panel(callback_query: types.CallbackQuery):
     if callback_query.from_user.id != ADMIN_ID:
@@ -586,7 +556,7 @@ async def admin_panel(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(texts['admin_panel'], reply_markup=get_admin_panel())
     await callback_query.answer()
 
-# Обработчик кнопки "Добавить товар"
+
 @dp.callback_query(F.data == "admin_add_product")
 async def admin_add_product(callback_query: types.CallbackQuery, state: FSMContext):
     if callback_query.from_user.id != ADMIN_ID:
@@ -600,7 +570,7 @@ async def admin_add_product(callback_query: types.CallbackQuery, state: FSMConte
     await callback_query.message.edit_text(texts['enter_product_name'])
     await callback_query.answer()
 
-# Обработчик ввода названия товара
+
 @dp.message(AdminStates.waiting_for_product_name)
 async def process_product_name(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
@@ -615,7 +585,7 @@ async def process_product_name(message: types.Message, state: FSMContext):
     await state.set_state(AdminStates.waiting_for_product_price)
     await message.answer(texts['enter_product_price'])
 
-# Обработчик ввода цены товара
+
 @dp.message(AdminStates.waiting_for_product_price)
 async def process_product_price(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
@@ -647,7 +617,7 @@ async def process_product_price(message: types.Message, state: FSMContext):
         await message.answer(f"{texts['product_added_success']}\n\nНазвание: {product_name}\nЦена: {price:,} сум")
         await state.clear()
         
-        # Показываем админ-панель снова
+
         await message.answer(texts['admin_panel'], reply_markup=get_admin_panel())
         
     except ValueError:
@@ -655,7 +625,7 @@ async def process_product_price(message: types.Message, state: FSMContext):
         texts = TEXTS[lang]
         await message.answer("❌ Неверный формат цены! Введите только цифры:")
 
-# Обработчик кнопки "Удалить товар"
+
 @dp.callback_query(F.data == "admin_delete_product")
 async def admin_delete_product(callback_query: types.CallbackQuery):
     if callback_query.from_user.id != ADMIN_ID:
@@ -679,7 +649,7 @@ async def admin_delete_product(callback_query: types.CallbackQuery):
     
     await callback_query.answer()
 
-# Обработчик удаления конкретного товара
+
 @dp.callback_query(F.data.startswith("admin_delete_"))
 async def delete_specific_product(callback_query: types.CallbackQuery):
     if callback_query.from_user.id != ADMIN_ID:
@@ -691,17 +661,16 @@ async def delete_specific_product(callback_query: types.CallbackQuery):
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
     
-    # Получаем информацию о товаре перед удалением
     cursor.execute('SELECT name, price FROM products WHERE product_id = ?', (product_id,))
     product_info = cursor.fetchone()
     
     if product_info:
         product_name, product_price = product_info
         
-        # Удаляем товар
+
         cursor.execute('DELETE FROM products WHERE product_id = ?', (product_id,))
         
-        # Также удаляем товар из корзин всех пользователей
+
         cursor.execute('DELETE FROM cart WHERE product_id = ?', (product_id,))
         
         conn.commit()
@@ -711,7 +680,7 @@ async def delete_specific_product(callback_query: types.CallbackQuery):
         
         await callback_query.answer(f"{texts['product_deleted_success']}")
         
-        # Обновляем сообщение с новым списком товаров
+
         conn = sqlite3.connect('shop.db')
         cursor = conn.cursor()
         cursor.execute('SELECT COUNT(*) FROM products')
@@ -727,7 +696,7 @@ async def delete_specific_product(callback_query: types.CallbackQuery):
     
     conn.close()
 
-# Обработчик смены языка
+
 @dp.callback_query(F.data == "change_language")
 async def change_language(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -739,7 +708,6 @@ async def change_language(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(text, reply_markup=get_language_keyboard(user_id))
     await callback_query.answer()
 
-# Обработчик выбора языка
 @dp.callback_query(F.data.startswith("lang_"))
 async def set_language(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -756,7 +724,6 @@ async def set_language(callback_query: types.CallbackQuery):
         )
     await callback_query.answer()
 
-# Обработчик кнопки "Назад"
 @dp.callback_query(F.data == "back_to_main")
 async def back_to_main(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -766,7 +733,7 @@ async def back_to_main(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(texts['main_menu'], reply_markup=get_main_menu(user_id))
     await callback_query.answer()
 
-# Обработчик кнопки "Корзина"
+
 @dp.callback_query(F.data == "cart")
 async def show_cart(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -815,7 +782,7 @@ async def show_cart(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(cart_text, reply_markup=builder.as_markup())
     await callback_query.answer()
 
-# Обработчик кнопки "Магазин"
+
 @dp.callback_query(F.data == "shop")
 async def show_shop(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -825,7 +792,7 @@ async def show_shop(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(shop_text, reply_markup=keyboard)
     await callback_query.answer()
 
-# Обработчик пагинации магазина
+
 @dp.callback_query(F.data.startswith("page_"))
 async def change_page(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -837,7 +804,7 @@ async def change_page(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(shop_text, reply_markup=keyboard)
     await callback_query.answer()
 
-# Обработчик добавления товара в корзину
+
 @dp.callback_query(F.data.startswith("add_to_cart_"))
 async def add_to_cart(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -846,20 +813,19 @@ async def add_to_cart(callback_query: types.CallbackQuery):
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
     
-    # Проверяем, есть ли товар уже в корзине
     cursor.execute('SELECT quantity FROM cart WHERE user_id = ? AND product_id = ?', (user_id, product_id))
     result = cursor.fetchone()
     
     if result:
-        # Увеличиваем количество
+
         cursor.execute('UPDATE cart SET quantity = quantity + 1 WHERE user_id = ? AND product_id = ?', (user_id, product_id))
     else:
-        # Добавляем новый товар
+
         cursor.execute('INSERT INTO cart (user_id, product_id, quantity) VALUES (?, ?, 1)', (user_id, product_id))
     
     conn.commit()
     
-    # Получаем название товара для уведомления
+
     cursor.execute('SELECT name FROM products WHERE product_id = ?', (product_id,))
     product_name = cursor.fetchone()[0]
     
@@ -870,7 +836,7 @@ async def add_to_cart(callback_query: types.CallbackQuery):
     
     await callback_query.answer(texts['added_to_cart'].format(name=product_name))
 
-# Обработчик увеличения количества товара
+
 @dp.callback_query(F.data.startswith("increase_"))
 async def increase_quantity(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -882,8 +848,6 @@ async def increase_quantity(callback_query: types.CallbackQuery):
     cursor.execute('UPDATE cart SET quantity = quantity + 1 WHERE user_id = ? AND product_id = ?', (user_id, product_id))
     conn.commit()
     conn.close()
-    
-    # Обновляем сообщение магазина
     page_match = re.search(r'page_(\d+)', callback_query.message.text)
     current_page = int(page_match.group(1)) if page_match else 0
     
@@ -893,7 +857,6 @@ async def increase_quantity(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(shop_text, reply_markup=keyboard)
     await callback_query.answer()
 
-# Обработчик уменьшения количества товара
 @dp.callback_query(F.data.startswith("decrease_"))
 async def decrease_quantity(callback_query: types.CallbackQuery):
     user_id = callback_query.from_user.id
@@ -912,8 +875,7 @@ async def decrease_quantity(callback_query: types.CallbackQuery):
     
     conn.commit()
     conn.close()
-    
-    # Обновляем сообщение магазина
+
     page_match = re.search(r'page_(\d+)', callback_query.message.text)
     current_page = int(page_match.group(1)) if page_match else 0
     
@@ -923,14 +885,13 @@ async def decrease_quantity(callback_query: types.CallbackQuery):
     await callback_query.message.edit_text(shop_text, reply_markup=keyboard)
     await callback_query.answer()
 
-# Обработчик оформления заказа
+
 @dp.callback_query(F.data == "checkout")
 async def start_checkout(callback_query: types.CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
     lang = get_user_language(user_id)
     texts = TEXTS[lang]
     
-    # Проверяем, что корзина не пуста
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
     
@@ -949,7 +910,6 @@ async def start_checkout(callback_query: types.CallbackQuery, state: FSMContext)
     await callback_query.message.edit_text(texts['enter_phone'], reply_markup=builder.as_markup())
     await callback_query.answer()
 
-# Обработчик отмены заказа
 @dp.callback_query(F.data == "cancel_order")
 async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
     user_id = callback_query.from_user.id
@@ -960,7 +920,6 @@ async def cancel_order(callback_query: types.CallbackQuery, state: FSMContext):
     await callback_query.message.edit_text(texts['order_cancelled'], reply_markup=get_main_menu(user_id))
     await callback_query.answer()
 
-# Обработчик ввода телефона
 @dp.message(OrderStates.waiting_for_phone)
 async def process_phone(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
@@ -983,7 +942,6 @@ async def process_phone(message: types.Message, state: FSMContext):
     
     await message.answer(texts['enter_room'], reply_markup=builder.as_markup())
 
-# Обработчик ввода номера комнаты
 @dp.message(OrderStates.waiting_for_room)
 async def process_room(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
@@ -1001,7 +959,6 @@ async def process_room(message: types.Message, state: FSMContext):
     data = await state.get_data()
     phone_number = data['phone']
     
-    # Получаем информацию о заказе
     conn = sqlite3.connect('shop.db')
     cursor = conn.cursor()
     
@@ -1014,7 +971,6 @@ async def process_room(message: types.Message, state: FSMContext):
     
     cart_items = cursor.fetchall()
     
-    # Формируем текст заказа
     order_text = texts['your_order']
     total_price = 0
     
@@ -1027,19 +983,19 @@ async def process_room(message: types.Message, state: FSMContext):
     order_text += f"{texts['room'].format(room=room_number)}\n"
     order_text += f"\n💵 **Итого: {total_price:,} сум**"
     
-    # Сохраняем заказ в базу
+  
     cursor.execute('''
         INSERT INTO orders (user_id, order_text, total_price, phone_number, room_number)
         VALUES (?, ?, ?, ?, ?)
     ''', (user_id, order_text, total_price, phone_number, room_number))
     
-    # Очищаем корзину
+  
     cursor.execute('DELETE FROM cart WHERE user_id = ?', (user_id,))
     
     conn.commit()
     conn.close()
     
-    # Отправляем подтверждение пользователю
+
     complete_text = texts['order_completed']
     complete_text += order_text
     complete_text += f"\n\n{texts['delivery_time']}"
@@ -1051,7 +1007,7 @@ async def process_room(message: types.Message, state: FSMContext):
     
     await message.answer(complete_text, reply_markup=builder.as_markup())
     
-    # Отправляем уведомление админу
+ 
     admin_text = f"📦 **Новый заказ!**\n\n"
     admin_text += f"👤 Пользователь: @{message.from_user.username or 'нет'}\n"
     admin_text += f"📞 Телефон: {phone_number}\n"
@@ -1062,7 +1018,6 @@ async def process_room(message: types.Message, state: FSMContext):
     
     await state.clear()
 
-# Запуск бота
 async def main():
     init_db()
     await dp.start_polling(bot)
